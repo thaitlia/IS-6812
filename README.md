@@ -1,3 +1,13 @@
 # IS-6812
-Spring 2025 Repository for IS 6812: MSBA Practice Project
-This is a pratice commit for the Github setup assignment.
+
+### Summary of business problem and project objective.
+
+### Your group's solution to the business problem.
+
+### Your contribution to the project
+
+### The business value of the solution.
+
+### Difficulties that your group encountered along the way.
+
+### What you learned in the project.
