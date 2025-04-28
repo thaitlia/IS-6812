@@ -1,6 +1,6 @@
 # IS-6812: MSBA Practice Project
 
-## Table of contents
+## Table of Contents
 - [Summary of Business Problem and Project Objective](#summary-of-business-problem-and-project-objective)
  	+ [Business Problem Statement](#business-problem-statement)
 	+ [Project Objective](#project-objective)
