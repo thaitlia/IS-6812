@@ -13,7 +13,7 @@
 ## Individual Notebooks
 | Notebook Title  | About | Link |
 | :---: | :---: | :---: |
-| Random Sampling of Home Credit Default Risk Files | Initial Exploratory Data Analysis (EDA) of the Home Credit data| ([Home Credit Default Risk EDA.Rmd](https://github.com/thaitlia/IS-6812/blob/b99bb5fd72137b7be76c951ba2d335152e1b6280/Final%20Presentation%20Modeling.Rmd)) |
+| Random Sampling of Home Credit Default Risk Files | Initial Exploratory Data Analysis (EDA) of the Home Credit data| [Home Credit Default Risk EDA.Rmd](https://github.com/thaitlia/IS-6812/blob/b99bb5fd72137b7be76c951ba2d335152e1b6280/Final%20Presentation%20Modeling.Rmd) |
 | Random Sampling of Home Credit Default Risk Files| Taking samples from each Home Credit file provided | [Random Sampling of Home Credit Default Risk Files.Rmd ](https://github.com/thaitlia/IS-6812/blob/8477ecd24e4e3fed6b69e308e4601ff2ce8c247f/Random%20Sampling%20of%20Home%20Credit%20Default%20Risk%20Files.Rmd)|
 | Advantages of Batch Normalization in Deep Learning | PyData Warsaw, Let’s meet to talk about AI in Bialystok #2 | 10.04.2018, 01.06.2018 | [Link](https://www.youtube.com/watch?v=9mI-viU9U0E) |
 
