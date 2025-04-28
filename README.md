@@ -3,7 +3,7 @@
 ## Table of contents
 - [Summary of Business Problem and Project Objective](#summary-of-business-problem-and-project-objective)
  	+ [Business Problem Statement](#business-problem-statement)
-	+ [Analytics Approach](#analytics-approach)
+	+ [Project Objective](#project-objective)
 - [Group 4 Solution to the Business Problem](#group-4-solution-to-the-business-problem)
 - [Individual Contribution to the Project](#individual-contribution-to-the-project)
 - [The Business Value of the Solution](#the-business-value-of-the-solution)
@@ -14,7 +14,7 @@
 ### Business Problem Statement
 Home Credit uses a variety of alternative data to predict a client’s likelihood of repayment. Although their current statistical models and machine learning methods are capable of making these predictions, the purpose of collaborating with Kaggle is to create a more robust and accurate prediction model to determine client repayment abilities – particularly with the unbanked population. This specific population usually does not have a typical credit score, preventing them from having access to the capital the general population has.
 
-### Analytics Approach
+### Project Objective
 Home Credit provides several transaction files describing a client’s financial history/background, as well as an application train and test set of data. The train set and additional files will be used to create a model for the target variable, TARGET – a binary response variable describing whether a client will have payment difficulties or not. The test set will be used to estimate the performance of the prediction model with cross-validation. 
 
 ## Group 4 Solution to the Business Problem
