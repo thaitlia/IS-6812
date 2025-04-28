@@ -1,6 +1,7 @@
 # IS-6812: MSBA Practice Project
 
 ## Table of Contents
+- [Individual Notebooks](#individual-notebooks)
 - [Summary of Business Problem and Project Objective](#summary-of-business-problem-and-project-objective)
  	+ [Business Problem Statement](#business-problem-statement)
 	+ [Project Objective](#project-objective)
