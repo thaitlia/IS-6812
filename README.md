@@ -13,8 +13,8 @@
 ## Individual Notebooks
 | Notebook Title  | About | Link |
 | :---: | :---: | :---: |
-| Random Sampling of Home Credit Default Risk Files | Initial Exploratory Data Analysis (EDA) of the Home Credit Data| ([Home Credit Default Risk EDA.Rmd](https://github.com/thaitlia/IS-6812/blob/b99bb5fd72137b7be76c951ba2d335152e1b6280/Final%20Presentation%20Modeling.Rmd)) |
-| Soft introduction into MSE based Linear Regression (part 2 of 'What this Machine Learning is all about?' talk)  | Azimo Lunch & Learn | 16.11.2017 | [Link](https://speakerdeck.com/f1sherkk/soft-introduction-to-mse-based-linear-regression) |
+| Random Sampling of Home Credit Default Risk Files | Initial Exploratory Data Analysis (EDA) of the Home Credit data| ([Home Credit Default Risk EDA.Rmd](https://github.com/thaitlia/IS-6812/blob/b99bb5fd72137b7be76c951ba2d335152e1b6280/Final%20Presentation%20Modeling.Rmd)) |
+| Random Sampling of Home Credit Default Risk Files| Taking samples from each Home Credit file provided | Random Sampling of Home Credit Default Risk Files.Rmd |
 | Advantages of Batch Normalization in Deep Learning | PyData Warsaw, Let’s meet to talk about AI in Bialystok #2 | 10.04.2018, 01.06.2018 | [Link](https://www.youtube.com/watch?v=9mI-viU9U0E) |
 
 ## Summary of Business Problem and Project Objective
