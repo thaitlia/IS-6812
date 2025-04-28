@@ -1,0 +1,451 @@
+---
+title: "Final Presentation"
+author: "Sabrina Lin"
+date: "2025-04-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r central hub for libraries}
+library(tidyverse)
+library(dplyr)
+library(broom)
+library(gbm)
+library(MASS)
+library(xgboost)
+library(randomForest)
+
+library(caret)
+library(C50)
+library(rminer) 
+library(tidyverse)
+library(e1071)
+library(matrixStats)
+library(knitr)
+```
+
+```{r}
+application_train <- read.csv('application_train.csv')
+```
+
+```{r}
+application_test <- read.csv('application_test.csv')
+```
+
+```{r}
+bureau_balance <- read.csv('bureau_balance.csv')
+```
+
+```{r}
+bureau <- read.csv('bureau.csv')
+```
+
+```{r}
+credit_card_balance <- read.csv('credit_card_balance.csv')
+```
+
+```{r}
+installments_payments <- read.csv('installments_payments.csv')
+```
+
+```{r}
+POS_CASH_balance <- read.csv('POS_CASH_balance.csv')
+```
+
+```{r}
+previous_application <- read.csv('previous_application.csv')
+```
+
+Removing columns
+```{r}
+application_train <- application_train %>%
+  dplyr::select(-c(CNT_CHILDREN, FLAG_MOBIL, FLAG_EMP_PHONE, FLAG_WORK_PHONE, FLAG_CONT_MOBILE, FLAG_PHONE, FLAG_EMAIL, CNT_FAM_MEMBERS, REGION_RATING_CLIENT, REGION_RATING_CLIENT_W_CITY, HOUR_APPR_PROCESS_START, REG_REGION_NOT_LIVE_REGION, 
+REG_REGION_NOT_WORK_REGION, LIVE_REGION_NOT_WORK_REGION, REG_CITY_NOT_LIVE_CITY, REG_CITY_NOT_WORK_CITY, LIVE_CITY_NOT_WORK_CITY, APARTMENTS_AVG, BASEMENTAREA_AVG, YEARS_BEGINEXPLUATATION_AVG, YEARS_BUILD_AVG, COMMONAREA_AVG, ELEVATORS_AVG, ENTRANCES_AVG, FLOORSMAX_AVG, FLOORSMIN_AVG, LANDAREA_AVG, LIVINGAPARTMENTS_AVG, LIVINGAREA_AVG, NONLIVINGAPARTMENTS_AVG, NONLIVINGAREA_AVG, APARTMENTS_MODE, BASEMENTAREA_MODE, YEARS_BEGINEXPLUATATION_MODE, YEARS_BUILD_MODE, COMMONAREA_MODE, ELEVATORS_MODE, ENTRANCES_MODE, FLOORSMAX_MODE, FLOORSMIN_MODE, LANDAREA_MODE, LIVINGAPARTMENTS_MODE, LIVINGAREA_MODE, NONLIVINGAPARTMENTS_MODE, NONLIVINGAREA_MODE, APARTMENTS_MEDI, BASEMENTAREA_MEDI, YEARS_BEGINEXPLUATATION_MEDI, YEARS_BUILD_MEDI, COMMONAREA_MEDI, ELEVATORS_MEDI, ENTRANCES_MEDI, FLOORSMAX_MEDI, FLOORSMIN_MEDI, LANDAREA_MEDI, LIVINGAPARTMENTS_MEDI, LIVINGAREA_MEDI, NONLIVINGAPARTMENTS_MEDI, NONLIVINGAREA_MEDI, FONDKAPREMONT_MODE, HOUSETYPE_MODE, TOTALAREA_MODE, WALLSMATERIAL_MODE, EMERGENCYSTATE_MODE, DAYS_LAST_PHONE_CHANGE, FLAG_DOCUMENT_2, FLAG_DOCUMENT_3, FLAG_DOCUMENT_4, FLAG_DOCUMENT_5, FLAG_DOCUMENT_6, FLAG_DOCUMENT_7, FLAG_DOCUMENT_8, FLAG_DOCUMENT_9, FLAG_DOCUMENT_10, FLAG_DOCUMENT_11, FLAG_DOCUMENT_12, FLAG_DOCUMENT_13, FLAG_DOCUMENT_14, FLAG_DOCUMENT_15, FLAG_DOCUMENT_16, FLAG_DOCUMENT_17, FLAG_DOCUMENT_18, FLAG_DOCUMENT_19, FLAG_DOCUMENT_20, FLAG_DOCUMENT_21, AMT_REQ_CREDIT_BUREAU_YEAR, WEEKDAY_APPR_PROCESS_START, NAME_FAMILY_STATUS, OBS_30_CNT_SOCIAL_CIRCLE, OBS_60_CNT_SOCIAL_CIRCLE, NAME_HOUSING_TYPE, AMT_REQ_CREDIT_BUREAU_QRT, NAME_INCOME_TYPE, CODE_GENDER, NAME_EDUCATION_TYPE, AMT_REQ_CREDIT_BUREAU_MON, NAME_TYPE_SUITE, DEF_30_CNT_SOCIAL_CIRCLE, FLAG_OWN_CAR, DEF_60_CNT_SOCIAL_CIRCLE, FLAG_OWN_REALTY, AMT_REQ_CREDIT_BUREAU_DAY, NAME_CONTRACT_TYPE, AMT_REQ_CREDIT_BUREAU_WEEK, AMT_REQ_CREDIT_BUREAU_HOUR))
+
+```
+
+Sample of 100,000 rows from each dataframe.
+```{r}
+set.seed(123)
+
+application_train_sample <- sample_n(application_train, 100000)
+bureau_balance_sample <- sample_n(bureau_balance, 100000)
+bureau_sample <- sample_n(bureau, 100000)
+credit_card_balance_sample <- sample_n(credit_card_balance, 100000)
+installments_payments_sample <- sample_n(installments_payments, 100000)
+POS_CASH_balance_sample <- sample_n(POS_CASH_balance, 100000)
+previous_application_sample <- sample_n(previous_application, 100000)
+```
+
+Getting NA counts
+```{r}
+#getting count of na's for each column for each file
+application_train_sample |>
+  summarise_all(~ sum(is.na(.)))
+bureau_balance_sample |>
+  summarise_all(~ sum(is.na(.)))
+bureau_sample |>
+  summarise_all(~ sum(is.na(.)))
+credit_card_balance_sample |>
+  summarise_all(~ sum(is.na(.)))
+installments_payments_sample |>
+  summarise_all(~ sum(is.na(.)))
+POS_CASH_balance_sample |> 
+  summarise_all(~ sum(is.na(.)))
+previous_application_sample |>
+  summarise_all(~ sum(is.na(.)))
+```
+
+For any missing NA numeric columns, fill with median. 
+```{r}
+application_train_sample <- application_train_sample |>
+   mutate(across(where(is.numeric), 
+         ~ replace(., is.na(.), median(., na.rm = TRUE))))
+
+bureau_balance_sample <- bureau_balance_sample |>
+   mutate(across(where(is.numeric), 
+         ~ replace(., is.na(.), median(., na.rm = TRUE))))
+
+bureau_sample <- bureau_sample |>
+   mutate(across(where(is.numeric), 
+         ~ replace(., is.na(.), median(., na.rm = TRUE))))
+
+credit_card_balance_sample <- credit_card_balance_sample |>
+   mutate(across(where(is.numeric), 
+         ~ replace(., is.na(.), median(., na.rm = TRUE))))
+
+installments_payments_sample <- installments_payments_sample |>
+   mutate(across(where(is.numeric), 
+         ~ replace(., is.na(.), median(., na.rm = TRUE))))
+
+POS_CASH_balance_sample <- POS_CASH_balance_sample |>
+   mutate(across(where(is.numeric), 
+         ~ replace(., is.na(.), median(., na.rm = TRUE))))
+
+previous_application_sample <- previous_application_sample |>
+   mutate(across(where(is.numeric), 
+         ~ replace(., is.na(.), median(., na.rm = TRUE))))
+```
+
+For remainder of NAs, which should be character columns, fill NAs with 'missing'.
+```{r}
+application_train_sample[is.na(application_train_sample)] <- "missing"
+bureau_balance_sample[is.na(bureau_balance_sample)] <- 'missing'
+bureau_sample[is.na(bureau_sample)] <- 'missing'
+credit_card_balance_sample[is.na(credit_card_balance_sample)] <- 'missing'
+installments_payments_sample[is.na(installments_payments_sample)] <- 'missing'
+POS_CASH_balance_sample[is.na(POS_CASH_balance_sample)] <- 'missing'
+previous_application_sample[is.na(previous_application_sample)] <- 'missing'
+```
+
+For categorical variables, factorize.
+```{r}
+application_train_sample <- as.data.frame(unclass(application_train_sample),stringsAsFactors=TRUE)
+
+bureau_balance_sample <- as.data.frame(unclass(bureau_balance_sample),stringsAsFactors=TRUE)
+
+bureau_sample <- as.data.frame(unclass(bureau_sample),stringsAsFactors=TRUE)
+
+credit_card_balance_sample <- as.data.frame(unclass(credit_card_balance_sample),stringsAsFactors=TRUE)
+
+installments_payments_sample <- as.data.frame(unclass(installments_payments_sample),stringsAsFactors=TRUE)
+
+POS_CASH_balance_sample <- as.data.frame(unclass(POS_CASH_balance_sample),stringsAsFactors=TRUE)
+
+previous_application_sample <- as.data.frame(unclass(previous_application_sample),stringsAsFactors=TRUE)
+```
+
+Getting NA counts
+```{r}
+#getting count of na's for each column for each file
+application_train_sample |>
+  summarise_all(~ sum(is.na(.)))
+bureau_balance_sample |>
+  summarise_all(~ sum(is.na(.)))
+bureau_sample |>
+  summarise_all(~ sum(is.na(.)))
+credit_card_balance_sample |>
+  summarise_all(~ sum(is.na(.)))
+installments_payments_sample |>
+  summarise_all(~ sum(is.na(.)))
+POS_CASH_balance_sample |> 
+  summarise_all(~ sum(is.na(.)))
+previous_application_sample |>
+  summarise_all(~ sum(is.na(.)))
+```
+
+```{r}
+bureau_and_bureau_balance <- merge(bureau_sample, bureau_balance_sample, by='SK_ID_BUREAU')
+```
+
+```{r}
+app_train_bureau_and_bureau_balance <- merge(application_train_sample, bureau_and_bureau_balance, by='SK_ID_CURR')
+```
+
+Combining/joining data tables
+```{r}
+bureau_and_bureau_balance <- bureau_sample %>%
+  inner_join(bureau_balance_sample, by = "SK_ID_BUREAU")
+```
+
+```{r}
+app_train_bureau_and_bureau_balance <- application_train_sample %>%
+  inner_join(bureau_and_bureau_balance, by = "SK_ID_CURR")
+```
+
+```{r}
+app_train_and_POS_CASH_balance <- application_train_sample %>%
+  inner_join(POS_CASH_balance_sample, by = "SK_ID_CURR")
+```
+
+```{r}
+app_train_and_credit_card_balance <- application_train_sample %>%
+  inner_join(credit_card_balance_sample, by = "SK_ID_CURR")
+```
+
+```{r}
+app_train_and_previous_application_balance <- application_train_sample %>%
+  inner_join(previous_application_sample, by = "SK_ID_CURR")
+```
+
+```{r}
+app_train_and_installments_payments_balance <- application_train_sample %>%
+  inner_join(installments_payments_sample, by = "SK_ID_CURR")
+```
+
+Getting cost values
+```{r}
+application_train_sample_copy <- application_train_sample
+
+application_train_sample_copy$TARGET <- as.factor(application_train_sample_copy$TARGET)
+
+application_train_sample_copy %>% 
+  group_by(TARGET) %>% 
+  summarise(Credit = sum(AMT_CREDIT))
+```
+
+```{r}
+summary(application_train_sample_copy)
+```
+
+```{r}
+set.seed(123)
+
+application_train_sample_copy_92 <- sample_n(application_train_sample_copy, 92000)
+
+application_train_sample_copy_92 %>% 
+  group_by(TARGET) %>% 
+  summarise(Credit = sum(AMT_CREDIT))
+```
+
+```{r}
+summary(application_train_sample_copy_92)
+```
+
+RandomForest modeling
+```{r} 
+## This will take LONG time to process!!!
+set.seed(123)
+
+app_train_bureau_and_bureau_balance$ORGANIZATION_TYPE <- NULL
+
+rf_model_app_train_bureau_and_bureau_balance <- randomForest(TARGET ~., data=app_train_bureau_and_bureau_balance, importance=TRUE)
+
+#Get the variables importance
+importance(rf_model_app_train_bureau_and_bureau_balance, scale=FALSE)
+varImpPlot(rf_model_app_train_bureau_and_bureau_balance)
+```
+
+```{r} 
+## This will take LONG time to process!!!
+set.seed(123)
+
+app_train_and_POS_CASH_balance$ORGANIZATION_TYPE <- NULL
+
+rf_model_app_train_and_POS_CASH_balance <- randomForest(TARGET ~., data=app_train_and_POS_CASH_balance, importance=TRUE)
+
+#Get the variables importance
+importance(rf_model_app_train_and_POS_CASH_balance)
+varImpPlot(rf_model_app_train_and_POS_CASH_balance)
+```
+
+```{r}
+summary(master_file)
+```
+
+```{r}
+model <- glm(TARGET~.,family=binomial, data=master_file)
+
+V <- caret::varImp(model)
+
+ggplot2::ggplot(V, aes(x=reorder(rownames(V),Overall), y=Overall)) +
+geom_point( color="blue", size=4, alpha=0.6)+
+geom_segment( aes(x=rownames(V), xend=rownames(V), y=0, yend=Overall), 
+color='skyblue') +
+xlab('Variable')+
+ylab('Overall Importance')+
+theme_light() +
+coord_flip() 
+```
+
+```{r}
+#set seed for reproducibility
+set.seed(123)
+
+#use 70% of dataset as training set and 30% as test set
+train <- createDataPartition(master_file$TARGET, p=0.7, list=FALSE)
+
+length(train)
+class(train)
+
+train_set <- master_file[train,]
+test_set <- master_file[-train,]
+
+train_set |>
+  nrow()
+
+test_set |>
+  nrow()
+
+```
+
+```{r}
+#Isolating target variable column in both train and test sets
+train_target <- master_file[train,2]
+test_target <- master_file[-train,2]
+```
+
+```{r}
+pred_model_train <- predict(rf_model, train_set)
+pred_model_test <- predict(rf_model, test_set)
+
+metrics_list <- c('MAE','MAPE','RAE','RMSE','RMSPE','RRSE','R2')
+
+#performance of predictions on training data
+mmetric(train_target,pred_model_train, metrics_list)
+
+#performance of predictions on testing data
+mmetric(test_target,pred_model_test, metrics_list)
+```
+
+RandomForest modeling
+```{r} 
+## This will take LONG time to process!!!
+set.seed(123)
+
+master_file$ORGANIZATION_TYPE <- NULL
+
+rf_model_1 <- randomForest(TARGET ~, data=master_file, importance=TRUE)
+
+#Get the variables importance
+importance(rf_model)
+varImpPlot(rf_model)
+```
+
+```{r}
+#set seed for reproducibility
+set.seed(123)
+
+#use 70% of dataset as training set and 30% as test set
+train <- createDataPartition(master_file$TARGET, p=0.7, list=FALSE)
+
+length(train)
+class(train)
+
+train_set <- master_file[train,]
+test_set <- master_file[-train,]
+
+train_set |>
+  nrow()
+
+test_set |>
+  nrow()
+
+```
+
+```{r}
+#Isolating target variable column in both train and test sets
+train_target <- master_file[train,2]
+test_target <- master_file[-train,2]
+```
+
+```{r}
+pred_model_train <- predict(rf_model, train_set)
+pred_model_test <- predict(rf_model, test_set)
+
+metrics_list <- c('MAE','MAPE','RAE','RMSE','RMSPE','RRSE','R2')
+
+#performance of predictions on training data
+mmetric(train_target,pred_model_train, metrics_list)
+
+#performance of predictions on testing data
+mmetric(test_target,pred_model_test, metrics_list)
+```
+
+### Cross-Validation Procedures
+1. Fit the model using the entire train set.
+2. Make exactly the same changes to the test set that you made to the train set.
+3. Make predictions for the test set. 
+4. Format your submission file. 
+5. Submit to Kaggle. 
+
+1. Fit the model using the entire train set.
+```{r}
+
+#creation of our submission model which is the same as the logistic_model created earlier using entire train set
+submission_model <- glm(TARGET ~ EXT_SOURCE_1 + EXT_SOURCE_2 + EXT_SOURCE_3, 
+                       family = binomial, 
+                       data = application_train_isolated_binned)
+```
+
+2. Make exactly the same changes to the test set that you made to the train set.
+```{r}
+application_test_isolated <- application_test[,c('SK_ID_CURR','EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3')]
+
+application_test_isolated[is.na(application_test_isolated)] <- 0
+
+application_test_isolated_binned <- application_test_isolated
+
+application_test_isolated_binned <- application_test_isolated
+
+application_test_isolated_binned$EXT_SOURCE_1 <- ifelse(application_test_isolated_binned$EXT_SOURCE_1 > 0, 1, 0)
+
+application_test_isolated_binned$EXT_SOURCE_2 <- ifelse(application_test_isolated_binned$EXT_SOURCE_2 > 0, 1, 0)
+
+application_test_isolated_binned$EXT_SOURCE_3 <- ifelse(application_test_isolated_binned$EXT_SOURCE_3 > 0, 1, 0)
+```
+
+3. Make predictions for the test set. 
+
+```{r}
+#creating the prediction using the test set data
+submission_predictions <- (predict(submission_model, application_test_isolated_binned, type="response") > 0.08) * 1
+
+#submission_predictions[is.na(submission_predictions)] <- 1
+
+head(submission_predictions)
+```
+
+4. Format your submission file. 
+```{r}
+#isolating the columns for formatting - Id column and SalePrice column
+submission <- application_test_isolated_binned |>
+  dplyr::select(SK_ID_CURR) |>
+  mutate(TARGET = submission_predictions)
+
+head(submission)
+
+#writing submission into a csv file
+write.csv(submission, 'kaggle_submission.csv', row.names = F)
+```
+
+5. Submit to Kaggle.
+
+Profit calculations
+```{r}
+app_train_bureau_and_bureau_balance <- application_train_sample %>%
+  inner_join(bureau_and_bureau_balance, by = "SK_ID_CURR")
+```
