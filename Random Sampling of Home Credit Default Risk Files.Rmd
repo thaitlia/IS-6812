@@ -12,7 +12,7 @@ library(dplyr)
 library(broom)
 ```
 
-## application_train - set seed (123) 
+Reading in necessary files to work with. 
 ```{r}
 application_train <- read.csv('application_train.csv')
 ```
