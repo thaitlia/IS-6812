@@ -1,0 +1,515 @@
+---
+title: "Presentation Modeling"
+author: "Sabrina Lin"
+date: "2025-03-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message= F, warning = F)
+```
+
+```{r central hub for libraries}
+library(tidyverse)
+library(dplyr)
+library(broom)
+library(gbm)
+library(MASS)
+library(xgboost)
+library(randomForest)
+
+library(caret)
+library(C50)
+library(rminer) 
+library(tidyverse)
+library(e1071)
+library(matrixStats)
+library(knitr)
+```
+
+Loading in the necessary csv files.
+```{r}
+application_train <- read.csv('application_train.csv')
+application_test <- read.csv('application_test.csv')
+```
+
+Isolating the variables determined by the RandomForest model to be significant: EXT_SOURCE_1, EXT_SOURCE_2, EXT_SOURCE_3, and the target variable, TARGET. SK_ID_CURR is also in dataframe for final kaggle submission. (TRAIN)
+```{r}
+application_train_isolated <- application_train[,c('SK_ID_CURR','TARGET','EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3')]
+```
+
+Produce summary statistics of the isolated dataframe.
+```{r}
+#showing structure
+application_train_isolated |>
+  str()
+
+#showing summary
+application_train_isolated |>
+  summary()
+```
+
+Counting NA's in each column.
+```{r}
+na_counts <- colSums(is.na(application_train_isolated))
+print(na_counts)
+```
+
+Filling missing NA's with 'missing'. 
+```{r}
+application_train_isolated[is.na(application_train_isolated)] <- 0
+
+na_counts <- colSums(is.na(application_train_isolated))
+print(na_counts)
+```
+
+Binning values within EXT_SOURCE_x columns. 
+```{r}
+application_train_isolated_bin <- application_train_isolated
+
+application_train_isolated_bin <- application_train_isolated_bin |> 
+  mutate(EXT_SOURCE_1_bin = cut(EXT_SOURCE_1, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+
+application_train_isolated_bin <- application_train_isolated_bin |> 
+  mutate(EXT_SOURCE_2_bin = cut(EXT_SOURCE_2, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+
+application_train_isolated_bin <- application_train_isolated_bin |> 
+  mutate(EXT_SOURCE_3_bin = cut(EXT_SOURCE_3, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+```
+
+```{r}
+ggplot(data = application_train_isolated,
+       mapping = aes(x = EXT_SOURCE_1)) +
+     geom_histogram(bins = 10) +
+     labs(title = "Histogram of EXT_SOURCE_1")
+```
+
+```{r}
+fit = glm(vs ~ hp, data=mtcars, family=binomial)
+newdat <- data.frame(hp=seq(min(mtcars$hp), max(mtcars$hp),len=100))
+newdat$vs = predict(fit, newdata=newdat, type="response")
+plot(vs~hp, data=mtcars, col="red4")
+lines(vs ~ hp, newdat, col="green4", lwd=2)
+```
+
+
+```{r}
+# Plot x and y with a regression line
+application_train_isolated(EXT_SOURCE_1, TARGET) %>%
+  ggplot(aes(x = EXT_SOURCE_1, y = TARGET)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_minimal()
+```
+
+Use pairs.panels to show distributions and correlations of all of the numeric variables.
+```{r fig.height=6, fig.width=6}
+application_train_isolated |>
+  dplyr::select(TARGET,EXT_SOURCE_1,EXT_SOURCE_2,EXT_SOURCE_3) |>
+  pairs.panels()
+```
+
+Cross-Validation on train set data for various models.
+```{r}
+model_1 <- glm(TARGET ~ EXT_SOURCE_1*EXT_SOURCE_3, data=application_train_isolated, family=binomial)
+summary(model_1)
+```
+
+```{r}
+model_2 <- glm(TARGET ~ EXT_SOURCE_1+EXT_SOURCE_2+EXT_SOURCE_3, data=application_train_isolated, family=binomial)
+summary(model_2)
+```
+
+```{r}
+model_3 <- glm(TARGET ~ EXT_SOURCE_1*EXT_SOURCE_2*EXT_SOURCE_3, data=application_train_isolated, family=binomial)
+summary(model_3)
+```
+
+```{r}
+model_4 <- glm(TARGET ~ EXT_SOURCE_1+EXT_SOURCE_3, data=application_train_isolated, family=binomial)
+summary(model_4)
+```
+```{r}
+model_5 <- glm(TARGET ~ EXT_SOURCE_1*EXT_SOURCE_3 + EXT_SOURCE_2, data=application_train_isolated, family=binomial)
+summary(model_5)
+```
+
+```{r}
+application_train_isolated_binned <- application_train_isolated
+
+application_train_isolated_binned$TARGET <- as.factor(application_train_isolated_binned$TARGET)
+
+application_train_isolated_binned$EXT_SOURCE_1 <- ifelse(application_train_isolated_binned$EXT_SOURCE_1 > 0, 1, 0)
+
+application_train_isolated_binned$EXT_SOURCE_2 <- ifelse(application_train_isolated_binned$EXT_SOURCE_2 > 0, 1, 0)
+
+application_train_isolated_binned$EXT_SOURCE_3 <- ifelse(application_train_isolated_binned$EXT_SOURCE_3 > 0, 1, 0)
+```
+
+
+```{r}
+#fit logistic regression model
+model <- glm(TARGET ~ EXT_SOURCE_1*EXT_SOURCE_3, data=application_train_isolated, family=binomial)
+
+#define new data frame that contains predictor variable
+newdata <- data.frame(EXT_SOURCE_1_3=seq(min(application_train_isolated$EXT_SOURCE_1), max(application_train_isolated$EXT_SOURCE_1),len=500))
+
+#use fitted model to predict values of vs
+newdata$TARGET = predict(model_1, newdata, type="response")
+
+#plot logistic regression curve
+plot(TARGET ~ EXT_SOURCE_1, data=application_train_isolated, col="steelblue")
+lines(TARGET ~ EXT_SOURCE_1, newdata, lwd=2)
+```
+
+Trying model_2 with cross-validation.
+```{r}
+application_train_isolated_model_2 <- application_train_isolated
+
+application_train_isolated_model_2$TARGET <- as.factor(application_train_isolated_model_2$TARGET)
+
+model_2 <- glm(TARGET ~ EXT_SOURCE_1+EXT_SOURCE_2+EXT_SOURCE_3, data=application_train_isolated_model_2, family=binomial)
+summary(model_2)
+```
+
+```{r}
+#set seed for reproducibility
+set.seed(123)
+
+#use 70% of dataset as training set and 30% as test set
+train <- createDataPartition(application_train_isolated_model_2$TARGET, p=0.7, list=FALSE)
+
+length(train)
+class(train)
+
+train_set <- application_train_isolated_model_2[train,]
+test_set <- application_train_isolated_model_2[-train,]
+
+train_set |>
+  nrow()
+
+test_set |>
+  nrow()
+
+```
+```{r}
+#Isolating target variable column in both train and test sets
+train_target <- application_train_isolated_model_2[train,2]
+test_target <- application_train_isolated_model_2[-train,2]
+```
+
+```{r}
+pred_model_2_train <- predict(model_2, train_set)
+pred_model_2_test <- predict(model_2, test_set)
+
+metrics_list <- c('MAE','MAPE','RAE','RMSE','RMSPE','RRSE','R2')
+
+#performance of predictions on training data
+mmetric(train_target,pred_model_2_train, metrics_list)
+
+#performance of predictions on testing data
+mmetric(test_target,pred_model_2_test, metrics_list)
+```
+
+### Cross-Validation Procedures w/ model 1
+1. Fit the model using the entire train set.
+2. Make exactly the same changes to the test set that you made to the train set.
+3. Make predictions for the test set. 
+4. Format your submission file. 
+5. Submit to Kaggle. 
+
+1. Fit the model using the entire train set.
+```{r}
+
+#creation of our submission model which is the same as the logistic_model created earlier using entire train set
+submission_model <- glm(TARGET ~ EXT_SOURCE_1 + EXT_SOURCE_2 + EXT_SOURCE_3, 
+                       family = binomial, 
+                       data = application_train_isolated_binned)
+```
+
+2. Make exactly the same changes to the test set that you made to the train set.
+```{r}
+application_test_isolated <- application_test[,c('SK_ID_CURR','EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3')]
+
+application_test_isolated[is.na(application_test_isolated)] <- 0
+
+application_test_isolated_binned <- application_test_isolated
+
+application_test_isolated_binned <- application_test_isolated
+
+application_test_isolated_binned$EXT_SOURCE_1 <- ifelse(application_test_isolated_binned$EXT_SOURCE_1 > 0, 1, 0)
+
+application_test_isolated_binned$EXT_SOURCE_2 <- ifelse(application_test_isolated_binned$EXT_SOURCE_2 > 0, 1, 0)
+
+application_test_isolated_binned$EXT_SOURCE_3 <- ifelse(application_test_isolated_binned$EXT_SOURCE_3 > 0, 1, 0)
+```
+
+3. Make predictions for the test set. 
+
+```{r}
+#creating the prediction using the test set data
+submission_predictions <- (predict(submission_model, application_test_isolated_binned, type="response") > 0.08) * 1
+
+#submission_predictions[is.na(submission_predictions)] <- 1
+
+head(submission_predictions)
+```
+
+4. Format your submission file. 
+```{r}
+#isolating the columns for formatting - Id column and SalePrice column
+submission <- application_test_isolated_binned |>
+  dplyr::select(SK_ID_CURR) |>
+  mutate(TARGET = submission_predictions)
+
+head(submission)
+
+#writing submission into a csv file
+write.csv(submission, 'kaggle_submission.csv', row.names = F)
+```
+
+5. Submit to Kaggle.
+
+```{r}
+application_train_isolated_bin2 <- application_train_isolated
+
+application_train_isolated_bin2 <- application_train_isolated_bin2 |> 
+  mutate(EXT_SOURCE_1_bin = cut(EXT_SOURCE_1, breaks=c(0,0.25,0.5,0.75,1),include.lowest=TRUE))
+
+application_train_isolated_bin2 <- application_train_isolated_bin2 |> 
+  mutate(EXT_SOURCE_2_bin = cut(EXT_SOURCE_2, breaks=c(0,0.25,0.5,0.75,1),include.lowest=TRUE))
+
+application_train_isolated_bin2 <- application_train_isolated_bin2 |> 
+  mutate(EXT_SOURCE_3_bin = cut(EXT_SOURCE_3, breaks=c(0,0.25,0.5,0.75,1),include.lowest=TRUE))
+```
+
+```{r}
+application_train_isolated_bin3 <- application_train_isolated
+
+application_train_isolated_bin3 <- application_train_isolated_bin3 |> 
+  mutate(EXT_SOURCE_1_bin = cut(EXT_SOURCE_1, breaks=c(0,0.1,1),include.lowest=TRUE))
+
+application_train_isolated_bin3 <- application_train_isolated_bin3 |> 
+  mutate(EXT_SOURCE_2_bin = cut(EXT_SOURCE_2, breaks=c(0,0.1,1),include.lowest=TRUE))
+
+application_train_isolated_bin3 <- application_train_isolated_bin3 |> 
+  mutate(EXT_SOURCE_3_bin = cut(EXT_SOURCE_3, breaks=c(0,0.1,1),include.lowest=TRUE))
+```
+
+```{r}
+application_train_isolated_bin$TARGET <- as.factor(application_train_isolated_bin$TARGET)
+```
+
+### Cross-Validation Procedures w/ model 2
+1. Fit the model using the entire train set.
+2. Make exactly the same changes to the test set that you made to the train set.
+3. Make predictions for the test set. 
+4. Format your submission file. 
+5. Submit to Kaggle. 
+
+1. Fit the model using the entire train set.
+```{r}
+
+#creation of our submission model which is the same as the logistic_model created earlier using entire train set
+submission_model <- glm(TARGET ~ EXT_SOURCE_1_bin + EXT_SOURCE_3_bin + EXT_SOURCE_2_bin, 
+                       family = binomial, 
+                       data = application_train_isolated_bin)
+```
+
+```{r}
+summary(submission_model)
+```
+
+2. Make exactly the same changes to the test set that you made to the train set.
+```{r}
+application_test_isolated <- application_test[,c('SK_ID_CURR','EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3')]
+
+application_test_isolated[is.na(application_test_isolated)] <- 0
+```
+
+```{r}
+application_test_isolated_bin <- application_test_isolated
+
+application_test_isolated_bin <- application_test_isolated_bin |> 
+  mutate(EXT_SOURCE_1_bin = cut(EXT_SOURCE_1, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+
+application_test_isolated_bin <- application_test_isolated_bin |> 
+  mutate(EXT_SOURCE_2_bin = cut(EXT_SOURCE_2, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+
+application_test_isolated_bin <- application_test_isolated_bin |> 
+  mutate(EXT_SOURCE_3_bin = cut(EXT_SOURCE_3, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+```
+
+3. Make predictions for the test set. 
+
+```{r}
+#creating the prediction using the test set data
+submission_predictions <- (predict(submission_model, application_test_isolated_bin, type="response") > 0.06821) * 1
+
+#submission_predictions[is.na(submission_predictions)] <- 1
+
+head(submission_predictions)
+```
+
+4. Format your submission file. 
+```{r}
+#isolating the columns for formatting - Id column and SalePrice column
+submission <- application_test_isolated_bin |>
+  dplyr::select(SK_ID_CURR) |>
+  mutate(TARGET = submission_predictions)
+
+head(submission)
+
+#writing submission into a csv file
+write.csv(submission, 'kaggle_submission.csv', row.names = F)
+```
+
+5. Submit to Kaggle.
+
+```{r}
+application_train_isolated_copy <- application_train_isolated
+
+application_train_isolated_copy$TARGET <- factor(application_train_isolated_copy$TARGET)
+
+model_2 <- glm(TARGET ~ EXT_SOURCE_1+EXT_SOURCE_2+EXT_SOURCE_3, data=application_train_isolated_copy, family=binomial)
+```
+
+```{r}
+#set seed for reproducibility
+set.seed(123)
+
+#use 70% of dataset as training set and 30% as test set
+train <- createDataPartition(application_train_isolated_copy$TARGET, p=0.7, list=FALSE)
+
+length(train)
+class(train)
+
+train_set <- application_train_isolated_copy[train,]
+test_set <- application_train_isolated_copy[-train,]
+
+train_set |>
+  nrow()
+
+test_set |>
+  nrow()
+```
+Generating predictions for glm
+```{r}
+train_model_pred <- predict(model_2, train_set)
+test_model_pred <- predict(model_2, test_set)
+```
+
+Generating confusion matrix for glm
+```{r}
+mmetric(train_set$TARGET, train_model_pred, metric='CONF')
+mmetric(test_set$TARGET, test_model_pred, metric='CONF')
+```
+
+Generating metrics for glm
+```{r}
+mmetric(train_set$TARGET, train_model_pred, metric=c('F1','ACC','PRECISION','RECALL'))
+mmetric(test_set$TARGET, test_model_pred, metric=c('F1','ACC','PRECISION','RECALL'))
+```
+```{r}
+application_test_isolated_copy <- application_test_isolated
+
+# 1. Logistic regression
+#logit_m = model_2
+#logit_P = predict(logit_m , newdata = application_test_isolated_copy ,type = 'response' )
+#logit_P <- ifelse(logit_P > 0.5,1,0) # Probability check
+#CM= table(application_test_isolated_copy , logit_P)
+
+#ROC-curve using pROC library
+library(pROC)
+roc_score=roc(application_test_isolated, submission_predictions) #AUC score
+plot(roc_score ,main ="ROC curve -- Logistic Regression ")
+```
+
+### Cross-Validation Procedures w/ model 3
+1. Fit the model using the entire train set.
+2. Make exactly the same changes to the test set that you made to the train set.
+3. Make predictions for the test set. 
+4. Format your submission file. 
+5. Submit to Kaggle. 
+
+1. Fit the model using the entire train set.
+```{r}
+
+application_train_isolated_2 <- application_train[,c('SK_ID_CURR','DAYS_BIRTH','DAYS_REGISTRATION','DAYS_EMPLOYED','TARGET', 'EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3')]
+
+application_train_isolated_2$DAYS_BIRTH[is.na(application_train_isolated_2$DAYS_BIRTH)] <- median(application_train_isolated_2$DAYS_BIRTH, na.rm=TRUE)
+
+application_train_isolated_2$DAYS_REGISTRATION[is.na(application_train_isolated_2$DAYS_REGISTRATION)] <- median(application_train_isolated_2$DAYS_REGISTRATION, na.rm=TRUE)
+
+application_train_isolated_2$DAYS_EMPLOYED[is.na(application_train_isolated_2$DAYS_EMPLOYED)] <- median(application_train_isolated_2$DAYS_EMPLOYED, na.rm=TRUE)
+
+application_train_isolated_2$EXT_SOURCE_1 <- ifelse(application_train_isolated_2$EXT_SOURCE_1 > 0, 1, 0)
+
+application_train_isolated_2$EXT_SOURCE_2 <- ifelse(application_train_isolated_2$EXT_SOURCE_2 > 0, 1, 0)
+
+application_train_isolated_2$EXT_SOURCE_3 <- ifelse(application_train_isolated_2$EXT_SOURCE_3 > 0, 1, 0)
+
+application_train_isolated_2 <- application_train_isolated_2 |> 
+  mutate(EXT_SOURCE_1_bin = cut(EXT_SOURCE_1, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+
+application_train_isolated_2 <- application_train_isolated_2 |> 
+  mutate(EXT_SOURCE_2_bin = cut(EXT_SOURCE_2, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+
+application_train_isolated_2 <- application_train_isolated_2 |> 
+  mutate(EXT_SOURCE_3_bin = cut(EXT_SOURCE_3, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+
+#creation of our submission model which is the same as the logistic_model created earlier using entire train set
+submission_model <- glm(TARGET ~ DAYS_BIRTH + DAYS_REGISTRATION + DAYS_EMPLOYED + EXT_SOURCE_1 + EXT_SOURCE_2 + EXT_SOURCE_3, 
+                       family = binomial, 
+                       data = application_train_isolated_2)
+```
+
+2. Make exactly the same changes to the test set that you made to the train set.
+```{r}
+application_test_isolated_2 <- application_test[,c('SK_ID_CURR','DAYS_BIRTH','DAYS_REGISTRATION','DAYS_EMPLOYED','EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3')]
+
+application_test_isolated_2$DAYS_BIRTH[is.na(application_test_isolated_2$DAYS_BIRTH)] <- median(application_test_isolated_2$DAYS_BIRTH, na.rm=TRUE)
+
+application_test_isolated_2$DAYS_REGISTRATION[is.na(application_test_isolated_2$DAYS_REGISTRATION)] <- median(application_test_isolated_2$DAYS_REGISTRATION, na.rm=TRUE)
+
+application_test_isolated_2$DAYS_EMPLOYED[is.na(application_test_isolated_2$DAYS_EMPLOYED)] <- median(application_test_isolated_2$DAYS_EMPLOYED, na.rm=TRUE)
+
+application_test_isolated_2$EXT_SOURCE_1 <- ifelse(application_test_isolated_2$EXT_SOURCE_1 > 0, 1, 0)
+
+application_test_isolated_2$EXT_SOURCE_2 <- ifelse(application_test_isolated_2$EXT_SOURCE_2 > 0, 1, 0)
+
+application_test_isolated_2$EXT_SOURCE_3 <- ifelse(application_test_isolated_2$EXT_SOURCE_3 > 0, 1, 0)
+
+application_test_isolated_2 <- application_test_isolated_2 |> 
+  mutate(EXT_SOURCE_1_bin = cut(EXT_SOURCE_1, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+
+application_test_isolated_2 <- application_test_isolated_2 |> 
+  mutate(EXT_SOURCE_2_bin = cut(EXT_SOURCE_2, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+
+application_test_isolated_2 <- application_test_isolated_2 |> 
+  mutate(EXT_SOURCE_3_bin = cut(EXT_SOURCE_3, breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1),include.lowest=TRUE))
+```
+
+3. Make predictions for the test set. 
+
+```{r}
+#creating the prediction using the test set data
+submission_predictions <- (predict(submission_model, application_test_isolated_2, type="response") > 0.06) * 1
+
+#submission_predictions[is.na(submission_predictions)] <- 1
+
+head(submission_predictions)
+```
+
+4. Format your submission file. 
+```{r}
+#isolating the columns for formatting - Id column and SalePrice column
+submission <- application_test_isolated_2 |>
+  dplyr::select(SK_ID_CURR) |>
+  mutate(TARGET = submission_predictions)
+
+head(submission)
+
+#writing submission into a csv file
+write.csv(submission, 'kaggle_submission.csv', row.names = F)
+```
