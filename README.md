@@ -4,7 +4,7 @@
 - [Summary of Business Problem and Project Objective](#summary-of-business-problem-and-project-objective)
  	+ [Business Problem Statement](#business-problem-statement)
 	+ [Analytics Approach](#analytics-approach)
-- [Group 4: "Hello World"'s Solution to the Business Problem](#group-4:-"hello-world"'s-solution-to-the-business-problem)
+- [Group 4 Solution to the Business Problem](#group-4-solution-to-the-business-problem)
 - [Individual Contribution to the Project](#individual-contribution-to-the-project)
 - [The Business Value of the Solution](#the-business-value-of-the-solution)
 - [Difficulties Encountered](#difficulties-encountered)
@@ -17,7 +17,7 @@ Home Credit uses a variety of alternative data to predict a client’s likelihoo
 ### Analytics Approach
 Home Credit provides several transaction files describing a client’s financial history/background, as well as an application train and test set of data. The train set and additional files will be used to create a model for the target variable, TARGET – a binary response variable describing whether a client will have payment difficulties or not. The test set will be used to estimate the performance of the prediction model with cross-validation. 
 
-## Group 4: "Hello World"'s Solution to the Business Problem
+## Group 4 Solution to the Business Problem
 Our model was able to predict with a roughly 92% accuracy on both the train and test set data. We were able to identify key predictors in the data for prediction, narrowing it down to EXT_SOURCE_1, EXT_SOURCE_2, and EXT_SOURCE_3 as well as supporting transactional predictors such as DAYS_BIRTH and DAYS_REGISTRATION to help support the model. Additionally, the ROC-AUC performance metric when submitted to Kaggle, the collaborative partner on this project, showed a value of 0.65183, meaning that the model does do better than just randomly guessing which clients will have repayment difficulties.
 
 Our recommended solution then, would be to streamline the transactional data collection process within Home Credit, making it so that client's would not have to fill out as much paperwork given the key predictors identified in the modeling. This allows faster turnaround for both client's and the business. Along with that, we would apply our model for these new applications, identifying the clients who may default and giving Home Credit the opportunity to mitigate the risk by taking a closer look at the applicant and creating a repayment plan better suited for them. 
