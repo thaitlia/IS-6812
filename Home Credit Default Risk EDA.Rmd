@@ -1,0 +1,344 @@
+---
+title: "Home Default Credit Risk EDA"
+author: "Sabrina Lin"
+date: "2025-02-14"
+output:
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE,message=FALSE, warnings=FALSE, results='hide')
+library(tidyverse)
+library(dplyr)
+library(broom)
+```
+
+## Introduction
+
+Home Credit uses a variety of alternative data to predict a client’s likelihood of repayment. Although their current statistical models and machine learning methods are capable of making these predictions, the purpose of collaborating with Kaggle is to create a more robust and accurate prediction model to determine client repayment abilities – particularly with the unbanked population. 
+
+Being able to accurately predict how capable a client is able to repay a loan allows Home Credit to confidently back them and ensure they are given loans with a principal, maturity, and timeline best suited for them. Thus, the intended purpose of this project is to create a robust logistic regression model for the target variable, TARGET – a binary response variable describing whether a client will have payment difficulties or not. 
+
+The purpose of this EDA notebook is a general exploration of the data provided by Home Credit and understanding which variables play the biggest role for prediction. Due to how much data is available, cleaning and condensing the rows and columns will be done in order to narrow the scope, while also making the data easier to work with when creating the model later on. 
+
+Questions about the data:
+
+1. Which are the strongest predictors for loan repayment in regards to the target variable, TARGET? 
+
+2. How do we determine which are the strongest predictors? 
+
+3. Each applicant is documented under the variable SK_ID_CURR in the application data sets, however, each SK_ID_CURR can have several loans open as described by SK_BUREAU_ID - what would be the best way to aggregate the information under each SK_ID_CURR? How would we summarize the important variables? 
+
+4. Much of the columns in application_train.csv are descriptions of the household the applicant lives in - is that truly necessary in terms of predictors? What would be a good way to determine that and eliminate from dataframe if not?  
+5. When dealing with missing data or NAs, how do we decide to fill in the information with an average, mode, median, etc.? Should we just delete the column or row? 
+
+6. How does bureau_balance play into this - how to relate it for each SK_ID_CURR? Assuming that MONTHS_BALANCE or STATUS are a strong predictor - how to test for that? Could we forgo this file? 
+
+7. Encoding NAs with zeros comes with a problem as majority of previous or current debt a client has is in the thousands, if not hundreds of thousands - which causes any plot to skew or makes it hard to see - should we remove rows with zeroes depending on the column?
+
+8. After testing some logistic regression models - many of them are very computationally extensive - how to reduce time? Either try taking a sample or eliminating rows?
+
+9. How does installments_payments play into this - how to relate it for each SK_ID_CURR? Could we forgo this file? 
+
+## Description of the Data
+
+Ten csv files are provided, two of which are the application train and test set containing the target variable, TARGET. Six files contain transactional data of each applicant, distinguished by the variable SK_ID_CURR, the ID of the loan, or SK_BUREAU_ID, a unique ID for each loan under SK_ID_CURR. The sample_submission.csv will not be used in the initial EDA as it is just an example formatting file. Similarly, the HomeCredit_columns_description.csv is a reference to variable naming. The application_test.csv will also be reserved for later usage as a way of judging how well the model is at predicting the target variable. Thus, these will be the main files to work with:  
+
+1. application_train.csv - holds applicant information including several columns on household specifics 
+2. bureau.csv - specifics of applicant loans such as timeline and debt amounts
+3. bureau_balance.csv - three columns: loan ID, months of balance, and status of loan 
+4. POS_CASH_balance - contains information of applicant's previous credit
+5. credit_card_balance - history and trends of applicant credit habits
+6. previous_application.csv - information of previous loan applications of applicant
+7. installments_payments.csv - installment information for previous and current loan IDs
+
+## Discussion of Missing Data
+
+```{r}
+#reading in the datasets
+application_train <- read.csv('home-credit-default-risk/application_train.csv')
+bureau <- read.csv('home-credit-default-risk/bureau.csv')
+bureau_balance <- read.csv('home-credit-default-risk/bureau_balance.csv')
+POS_CASH_balance <- read.csv('home-credit-default-risk/POS_CASH_balance.csv')
+credit_card_balance <- read.csv('home-credit-default-risk/credit_card_balance.csv')
+previous_application <- read.csv('home-credit-default-risk/previous_application.csv')
+installments_payments <- read.csv('home-credit-default-risk/installments_payments.csv')
+```
+
+```{r}
+
+#getting count of na's for each column for each file
+application_train |>
+  summarise_all(~ sum(is.na(.)))
+bureau |>
+  summarise_all(~ sum(is.na(.)))
+bureau_balance |>
+  summarise_all(~ sum(is.na(.)))
+credit_card_balance |>
+  summarise_all(~ sum(is.na(.)))
+installments_payments |>
+  summarise_all(~ sum(is.na(.)))
+POS_CASH_balance |> 
+  summarise_all(~ sum(is.na(.)))
+previous_application |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+To begin with, application_train.csv has several columns containing many NAs. Majority of columns are describing the building where the client lives and although the household an individual lives in could help describe finances, I'd argue in this project it wouldn't be as strong of a predictor as transactional history and habits. Therefore for this file, if the percentage of NAs is over 70%, the column will be deleted from the file. The FLAG DOCUMENT columns will also be removed as I'd argue they are not pertinent to prediction as the information we have for each client is what we are working with despite client's not providing certain documents. 
+
+```{r}
+
+#summarizing amount of NAs for each column in application train set and deleting columns with more than 70% NAs
+application_train |>
+  summarize_all(funs(sum(is.na(.)) / length(.)))
+
+#https://stackoverflow.com/questions/31848156/delete-columns-rows-with-more-than-x-missing
+application_train <- application_train[, which(colMeans(!is.na(application_train)) > 0.7)]
+
+application_train <- application_train |>
+  select(-contains(c('FLAG_DOCUMENT')))
+
+#replacing all NAs with 0
+application_train[is.na(application_train)] <- 0
+
+#checking that there are no more NAs in dataframe
+application_train |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+bureau.csv also has several columns with NAs. However, the information contained in this file seem important - columns such as AMT_CREDIT_SUM_DEBT, current debt on Credit Bureau credit, could be a factor when dealing with predictions of future repayment. It could be assumed that if a record doesn't contain such information, then the client very well doesn't have current debt for example. Therefore, for this file, NAs will be replaced by zero.
+
+```{r}
+
+#replacing all NAs with 0
+bureau[is.na(bureau)] <- 0
+
+#checking that there are no more NAs in dataframe
+bureau |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+credit_card_balance.csv will follow the same replacement as bureau.csv where NAs will be replaced by zero as credit history intuitively seems like a good predictor of credit repayment. It could be possible that a client may have zero drawings in a month. 
+
+```{r}
+
+#replacing all NAs with 0
+credit_card_balance[is.na(credit_card_balance)] <- 0
+
+#checking that there are no more NAs in dataframe
+credit_card_balance |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+The only NAs in installments_payments are located in the DAYS_ENTRY_PAYMENT and the AMT_PAYMENT where the same 2905 IDs are missing both. For now, the NAs will be replaced with missing as it would be interesting to calculate the time between when the installment was supposed to be paid and when it was actually paid for other clients. 
+
+```{r}
+
+#determining if the same 2905 clients are missing information
+#https://www.statology.org/r-select-rows-with-na/
+installments_payments[!complete.cases(installments_payments), ]
+
+#replacing all NAs with missing
+installments_payments[is.na(installments_payments)] <- 'missing'
+
+#checking that there are no more NAs in dataframe
+installments_payments |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+POS_CASH_balance.csv will follow the same replacement as bureau.csv where NAs will be replaced by zero as it could be that clients currently do not have previous credit to deal with or are done with prior installments.
+
+```{r}
+
+#replacing all NAs with 0
+POS_CASH_balance[is.na(POS_CASH_balance)] <- 0
+
+#checking that there are no more NAs in dataframe
+POS_CASH_balance |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+previous_application.csv has columns regarding prior application information. After previewing which columns had missing NAs, initially they do not seem like strong predictors as it would be Home Credit's job to set the client's up for better success on future applications and would determine the best loan for them. Thus, the percentage of NAs in a column greater than 70% will be deleted and the remainder replaced by zero. 
+
+```{r}
+
+#summarizing amount of NAs for each column in previous_application and deleting columns with more than 70% NAs
+previous_application |>
+  summarize_all(funs(sum(is.na(.)) / length(.)))
+
+#https://stackoverflow.com/questions/31848156/delete-columns-rows-with-more-than-x-missing
+previous_application <- previous_application[, which(colMeans(!is.na(previous_application)) > 0.7)]
+
+#replacing all NAs with 0
+previous_application[is.na(previous_application)] <- 0
+
+#checking that there are no more NAs in dataframe
+previous_application |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+
+bureau_balance has no NAs and will remain as is. 
+
+## Exploratory Visualizations/Summary Tables
+
+Initial exploration into the bureau file including removal of columns such as CREDIT_CURRENCY as intuitively, the type of currency most likely does not matter in terms of debt repayment. Also, trying out different ways of grouping and compacting the data to be easier to work and manage with including getting all the rows under one ID - SK_ID_CURR. This will allow for the bureau file to be aggregated with the application train file as it contains the target variable. 
+
+However, there are a lot of zeroes present which might skew the data, thus attempting to condense total debt amounts either by sum or median for each SK_ID_CURR. 
+
+```{r}
+
+#removing CREDIT_ACTIVE, CREDIT_CURRENCY, and CREDIT_TYPE from bureau file
+bureau$CREDIT_ACTIVE <- NULL
+bureau$CREDIT_CURRENCY <- NULL
+bureau$CREDIT_TYPE <- NULL
+
+#condensing bureau file so each SK_ID_CURR has single row with select columns to review dealing with sums of debt
+bureau_sum <- bureau |> 
+  group_by(SK_ID_CURR) |>
+  summarise(CREDIT_DAY_OVERDUE = sum(CREDIT_DAY_OVERDUE),
+            AMT_CREDIT_MAX_OVERDUE = sum(AMT_CREDIT_MAX_OVERDUE),
+            CNT_CREDIT_PROLONG = sum(CNT_CREDIT_PROLONG),
+            AMT_CREDIT_SUM = sum(AMT_CREDIT_SUM),
+            AMT_CREDIT_SUM_DEBT = sum(AMT_CREDIT_SUM_DEBT),
+            AMT_CREDIT_SUM_LIMIT = sum(AMT_CREDIT_SUM_LIMIT),
+            AMT_CREDIT_SUM_OVERDUE = sum(AMT_CREDIT_SUM_OVERDUE))
+
+#condensing bureau file so each SK_ID_CURR has single row with select columns to review dealing with medians of debt
+bureau_median <- bureau |> 
+  group_by(SK_ID_CURR) |>
+  summarise(CREDIT_DAY_OVERDUE = median(CREDIT_DAY_OVERDUE),
+            AMT_CREDIT_MAX_OVERDUE = median(AMT_CREDIT_MAX_OVERDUE),
+            CNT_CREDIT_PROLONG = median(CNT_CREDIT_PROLONG),
+            AMT_CREDIT_SUM = median(AMT_CREDIT_SUM),
+            AMT_CREDIT_SUM_DEBT = median(AMT_CREDIT_SUM_DEBT),
+            AMT_CREDIT_SUM_LIMIT = median(AMT_CREDIT_SUM_LIMIT),
+            AMT_CREDIT_SUM_OVERDUE = median(AMT_CREDIT_SUM_OVERDUE))
+
+#merging bureau and application_train files into one called b_a_train
+#https://stackoverflow.com/questions/54557833/how-to-match-id-numbers-to-merge-two-dataframes
+b_a_train_sum <- merge(application_train, bureau_sum, by = 'SK_ID_CURR')
+head(b_a_train_sum)
+
+b_a_train_median <- merge(application_train, bureau_median, by = 'SK_ID_CURR')
+head(b_a_train_median)
+
+```
+Attempting to find strong predictors in the bureau data set by comparing different columns against the target variable. In order to get an overall scope of data, a boxplot was used, but with the response, TARGET, encoded as 1 = Payment Difficulties and 0 = All Other Cases. Several columns were compared such as AMT_INCOME_TOTAL, but difficulties when it came to filtering out zeroes. Interestingly, several plots came out with just the All Other Cases response. 
+
+```{r}
+
+#attempting to compare different variables against TARGET column to see if there's any strong relationship or indicators between groups
+b_a_train_sum <- b_a_train_sum |>
+      mutate(TARGET = ifelse(TARGET == 1, 'Payment Difficulties', 'All Other Cases'))
+
+b_a_train_sum_AMT_CREDIT_SUM <- b_a_train_sum |>
+  filter(AMT_CREDIT_SUM > 0)
+
+ggplot(data = b_a_train_sum_AMT_CREDIT_SUM,
+       mapping = aes(x = TARGET, y = AMT_CREDIT_SUM)) +
+    geom_boxplot() +
+    labs(title = 'Boxplot of AMT_CREDIT_SUM')
+
+b_a_train_sum_AMT_INCOME_TOTAL <- b_a_train_sum |>
+  filter(AMT_INCOME_TOTAL > 0)
+
+ggplot(data = b_a_train_sum_AMT_INCOME_TOTAL,
+       mapping = aes(x = TARGET, y = AMT_INCOME_TOTAL)) +
+    geom_boxplot() +
+    labs(title = 'Boxplot of AMT_INCOME_TOTAL')
+
+```
+
+Realizing the data is taking too long for R Studio to parse through, thus taking a sample to try to reduce time. Merged the bureau and application train files together so the bureau predictors can be modeled against the target variable using logistic regression. Selecting a few predictors to work with - selected instinctively after reading the various descriptions. 
+
+```{r}
+
+#merging bureau and application train files together
+bureau_and_application_train <- merge(application_train, bureau, by = 'SK_ID_CURR')
+
+#taking a sample from bureau and application to test
+bureau_and_application_train_sample <- sample_n(bureau_and_application_train, 25)
+
+#testing out some variables in a logistic regression model 
+bureau_model <- glm(TARGET ~ AMT_CREDIT_SUM_OVERDUE + AMT_CREDIT_MAX_OVERDUE, family = 'binomial', data = bureau_and_application_train)
+
+summary(bureau_model)
+
+#testing out some variables in a logistic regression model w/ sample
+bureau_model_sam <- glm(TARGET ~ AMT_CREDIT_SUM_OVERDUE + AMT_CREDIT_MAX_OVERDUE, family = 'binomial', data = bureau_and_application_train_sample)
+
+summary(bureau_model_sam)
+
+```
+
+Merging the other files with application train, each in their own specific file due to how much data there is, R Studio errors out. 
+
+```{r}
+
+#merging all files into different aggregated files with the main one being application_train and bureau using the SK_ID_CURR - except bureau_balance.csv
+#https://stackoverflow.com/questions/54557833/how-to-match-id-numbers-to-merge-two-dataframes
+master_file_baPOS <- merge(application_train, POS_CASH_balance, by = 'SK_ID_CURR')
+master_file_bacc <- merge(application_train, credit_card_balance, by = 'SK_ID_CURR')
+master_file_bap <- merge(application_train, previous_application, by = 'SK_ID_CURR')
+
+```
+
+Selecting a few predictors to work with for the POS_CASH_balance file. SK_DPD is days past due during month of previous credit and MONTHS_BALANCE is the month of balance relative to application date - both selected as potential indicators for future debt repayment as they seem to be related to client habits. 
+
+```{r}
+
+POS_CASH_sample <- sample_n(master_file_baPOS, 25)
+
+#testing out some variables in a logistic regression model 
+POS_CASH_model <- glm(TARGET ~ SK_DPD + MONTHS_BALANCE, family = 'binomial', data = POS_CASH_sample)
+
+summary(POS_CASH_model)
+```
+
+Selecting a few predictors to work with for the credit_card_balance file. AMT_DRAWINGS_ATM_CURRENT, AMT_DRAWINGS_POS_CURRENT, AMT_PAYMENT_CURRENT, CNT_DRAWINGS_CURRENT, are all variables that describe with drawl habits of each client and chosen as a test to see if this file would be a good one to dig into further.  
+
+```{r}
+
+#taking a random sample of rows from dataframe to reduce time
+cc_sample <- sample_n(master_file_bacc, 25)
+
+#testing out some variables in a logistic regression model 
+cc_model_1 <- glm(TARGET ~ AMT_DRAWINGS_ATM_CURRENT + AMT_DRAWINGS_POS_CURRENT, family = 'binomial', data = cc_sample)
+
+summary(cc_model_1)
+
+cc_model_2 <- glm(TARGET ~ AMT_PAYMENT_CURRENT + CNT_DRAWINGS_CURRENT, family = 'binomial', data = cc_sample)
+
+summary(cc_model_2)
+
+```
+
+CODE_REJECT_REASON in the previous_application file was chosen as past rejection reasons could be a good way to understand how to avoid the same reasons in a future application. 
+
+```{r}
+
+#taking a random sample of rows from dataframe to reduce time
+p_sample <- sample_n(master_file_bap, 25)
+
+#testing out some variables in a logistic regression model 
+p_model <- glm(TARGET ~ CODE_REJECT_REASON, family = 'binomial', data = p_sample)
+
+summary(p_model)
+
+```
+
+## Results 
+
+Needless to say, Home Credit provides an ample amount of transactional data - so much so that the computation time often errored out when executing commands. Although more data is always better than none, it became increasingly difficult to get results in a timely fashion. Going forward, it would be advantageous to take a sample from each file of SK_ID_CURR for any modeling. Further findings showed that sample size does matter, currently many of the samples have a random selection of 1000, but prior, no samples were taken and files such as POS_CASH_balance showed promising results of strong predictors for the target variable. Specifically, this model showed p-values less than <2e-16: 
+
+POS_CASH_model <- glm(TARGET ~ SK_DPD + MONTHS_BALANCE, family = 'binomial', data = POS_CASH_sample)
+
+Perhaps sample sizes of 10,000 would be enough for R to handle without sacrificing computational effort. Other files such as credit_card_balance also showed promising predictors with higher sample sizes, particularly for variables describing the habits of clients like, AMT_DRAWINGS_ATM_CURRENT, AMT_DRAWINGS_POS_CURRENT, AMT_PAYMENT_CURRENT, and CNT_DRAWINGS_CURRENT. Intuitively, this would make sense as prior withdrawl and debt habits would be beneficial in predicting future repayment habits. Thus, focus would be on these files in particular going forward. 
+
+While parsing through the data, the application_train file had a lot of rows describing household amounts such as ELEVATORS_MODE, BASEMENT_AREA_MEDI, etc. and several columns outlining which documents a client submitted (the FLAG_DOCUMENT columns). So while there is a lot of data, much of the provided information seemed unnecessary in terms of modeling and exploration as they didn't describe client habits. Although these variables could describe a client's finances, the purpose of Home Credit is to outfit a loan fit for a client, regardless of prior background in regards to current living situations. Further cleaning of the data may be needed across all files for description columns such as the ones in application_train. 
+
+Another difficulty was deciding how to visualize the numeric records in the bureau file. Encoding the NAs with zeroes proved to be an issue when typically, many client's had debt in the thousands, if not hundreds of thousands. The way that plots were created were heavily skewed due to the amount of zeroes present in the numeric records as well as the broad range of debts. Filtering to records not including zero didn't help either, thus for future modeling, a logarithmic scale will have to be used in order to properly scale any plots and logistic regression models. 
+
+The initial EDA process has shown just how vast the Home Credit data set is and how difficult it is to wrangle and parse through to what's important. It has emphasized how crucial the initial cleaning of the data is and how much can be removed as well. Many of the initial scripts written in the Exploratory Visualizations and/or Summary Tables section can be further utilized by adding additional components such as logarithmic scaling. Sampling will have to be used as the files are far too large for R Studio to computationally handle, however, 1000 records is not representative of the population, so an increase to 10,000 records or more is needed. In terms of an analytics approach, starting with a sampling based on SK_ID_CURR would've been helpful to start with and revision will be made to begin with that. 
