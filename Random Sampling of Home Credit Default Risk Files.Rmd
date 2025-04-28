@@ -1,0 +1,255 @@
+---
+title: "Random Sampling of Home Credit Default Risk Files"
+author: "Sabrina Lin"
+date: "2025-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(broom)
+```
+
+## application_train - set seed (123) 
+```{r}
+application_train <- read.csv('application_train.csv')
+```
+```{r}
+#summarizing amount of NAs for each column in application train set and deleting columns with more than 70% NAs
+application_train |>
+  summarize_all(funs(sum(is.na(.)) / length(.)))
+
+#https://stackoverflow.com/questions/31848156/delete-columns-rows-with-more-than-x-missing
+application_train <- application_train[, which(colMeans(!is.na(application_train)) > 0.7)]
+
+application_train <- application_train |>
+  select(-contains(c('FLAG_DOCUMENT')))
+
+#replacing all NAs with 0
+application_train[is.na(application_train)] <- 0
+
+#checking that there are no more NAs in dataframe
+application_train |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+```{r}
+application_train_sample <- sample_n(application_train, 10000)
+write.csv(application_train_sample, 'application_train_sample.csv')
+```
+
+## application_train - pre-deleted columns 
+```{r}
+application_train <- read.csv('application_train.csv')
+```
+```{r}
+#replacing all NAs with median or mode
+application_train$AMT_ANNUITY[is.na(application_train$AMT_ANNUITY)] <- median(application_train$AMT_ANNUITY, na.rm=TRUE)
+
+application_train$AMT_GOODS_PRICE[is.na(application_train$AMT_GOODS_PRICE)] <- median(application_train$AMT_GOODS_PRICE, na.rm=TRUE)
+
+application_train$OWN_CAR_AGE[is.na(application_train$OWN_CAR_AGE)] <- median(application_train$OWN_CAR_AGE, na.rm=TRUE)
+
+application_train$CNT_FAM_MEMBERS[is.na(application_train$CNT_FAM_MEMBERS)] <- median(application_train$CNT_FAM_MEMBERS, na.rm=TRUE)
+
+application_train$EXT_SOURCE_1[is.na(application_train$EXT_SOURCE_1)] <- median(application_train$EXT_SOURCE_1, na.rm=TRUE)
+
+application_train$EXT_SOURCE_2[is.na(application_train$EXT_SOURCE_2)] <- median(application_train$EXT_SOURCE_2, na.rm=TRUE)
+
+application_train$EXT_SOURCE_3[is.na(application_train$EXT_SOURCE_3)] <- median(application_train$EXT_SOURCE_3, na.rm=TRUE)
+
+application_train$OBS_30_CNT_SOCIAL_CIRCLE[is.na(application_train$OBS_30_CNT_SOCIAL_CIRCLE)] <- median(application_train$OBS_30_CNT_SOCIAL_CIRCLE, na.rm=TRUE)
+
+application_train$DEF_30_CNT_SOCIAL_CIRCLE[is.na(application_train$DEF_30_CNT_SOCIAL_CIRCLE)] <- median(application_train$DEF_30_CNT_SOCIAL_CIRCLE, na.rm=TRUE)
+
+application_train$OBS_60_CNT_SOCIAL_CIRCLE[is.na(application_train$OBS_60_CNT_SOCIAL_CIRCLE)] <- median(application_train$OBS_60_CNT_SOCIAL_CIRCLE, na.rm=TRUE)
+
+application_train$DEF_60_CNT_SOCIAL_CIRCLE[is.na(application_train$DEF_60_CNT_SOCIAL_CIRCLE)] <- median(application_train$DEF_60_CNT_SOCIAL_CIRCLE, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_HOUR[is.na(application_train$AMT_REQ_CREDIT_BUREAU_HOUR)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_HOUR, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_DAY[is.na(application_train$AMT_REQ_CREDIT_BUREAU_DAY)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_DAY, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_WEEK[is.na(application_train$AMT_REQ_CREDIT_BUREAU_WEEK)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_WEEK, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_MON[is.na(application_train$AMT_REQ_CREDIT_BUREAU_MON)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_MON, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_QRT[is.na(application_train$AMT_REQ_CREDIT_BUREAU_QRT)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_QRT, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_YEAR[is.na(application_train$AMT_REQ_CREDIT_BUREAU_YEAR)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_YEAR, na.rm=TRUE)
+
+#checking that there are no more NAs in dataframe
+application_train |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+```{r}
+#taking a sample of 10,000 from the application train set
+set.seed(123) 
+application_train_sample <- sample_n(application_train, 10000)
+write.csv(application_train_sample, 'application_train_sample.csv')
+```
+
+## application_test - pre-deleted columns 
+```{r}
+application_test <- read.csv('application_test.csv')
+```
+```{r}
+#replacing all NAs with median or mode
+application_test$AMT_ANNUITY[is.na(application_test$AMT_ANNUITY)] <- median(application_test$AMT_ANNUITY, na.rm=TRUE)
+
+application_test$AMT_GOODS_PRICE[is.na(application_test$AMT_GOODS_PRICE)] <- median(application_test$AMT_GOODS_PRICE, na.rm=TRUE)
+
+application_train$OWN_CAR_AGE[is.na(application_train$OWN_CAR_AGE)] <- median(application_train$OWN_CAR_AGE, na.rm=TRUE)
+
+application_train$CNT_FAM_MEMBERS[is.na(application_train$CNT_FAM_MEMBERS)] <- median(application_train$CNT_FAM_MEMBERS, na.rm=TRUE)
+
+application_train$EXT_SOURCE_1[is.na(application_train$EXT_SOURCE_1)] <- median(application_train$EXT_SOURCE_1, na.rm=TRUE)
+
+application_train$EXT_SOURCE_2[is.na(application_train$EXT_SOURCE_2)] <- median(application_train$EXT_SOURCE_2, na.rm=TRUE)
+
+application_train$EXT_SOURCE_3[is.na(application_train$EXT_SOURCE_3)] <- median(application_train$EXT_SOURCE_3, na.rm=TRUE)
+
+application_train$OBS_30_CNT_SOCIAL_CIRCLE[is.na(application_train$OBS_30_CNT_SOCIAL_CIRCLE)] <- median(application_train$OBS_30_CNT_SOCIAL_CIRCLE, na.rm=TRUE)
+
+application_train$DEF_30_CNT_SOCIAL_CIRCLE[is.na(application_train$DEF_30_CNT_SOCIAL_CIRCLE)] <- median(application_train$DEF_30_CNT_SOCIAL_CIRCLE, na.rm=TRUE)
+
+application_train$OBS_60_CNT_SOCIAL_CIRCLE[is.na(application_train$OBS_60_CNT_SOCIAL_CIRCLE)] <- median(application_train$OBS_60_CNT_SOCIAL_CIRCLE, na.rm=TRUE)
+
+application_train$DEF_60_CNT_SOCIAL_CIRCLE[is.na(application_train$DEF_60_CNT_SOCIAL_CIRCLE)] <- median(application_train$DEF_60_CNT_SOCIAL_CIRCLE, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_HOUR[is.na(application_train$AMT_REQ_CREDIT_BUREAU_HOUR)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_HOUR, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_DAY[is.na(application_train$AMT_REQ_CREDIT_BUREAU_DAY)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_DAY, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_WEEK[is.na(application_train$AMT_REQ_CREDIT_BUREAU_WEEK)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_WEEK, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_MON[is.na(application_train$AMT_REQ_CREDIT_BUREAU_MON)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_MON, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_QRT[is.na(application_train$AMT_REQ_CREDIT_BUREAU_QRT)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_QRT, na.rm=TRUE)
+
+application_train$AMT_REQ_CREDIT_BUREAU_YEAR[is.na(application_train$AMT_REQ_CREDIT_BUREAU_YEAR)] <- median(application_train$AMT_REQ_CREDIT_BUREAU_YEAR, na.rm=TRUE)
+
+#checking that there are no more NAs in dataframe
+application_train |>
+  summarise_all(~ sum(is.na(.)))
+
+```
+```{r}
+set.seed(123) 
+application_train_sample <- sample_n(application_train, 10000)
+write.csv(application_train_sample, 'application_train_sample.csv')
+```
+
+## bureau
+```{r}
+bureau <- read.csv('bureau.csv')
+```
+```{r}
+#replacing all NAs with 0
+bureau[is.na(bureau)] <- 0
+
+#checking that there are no more NAs in dataframe
+bureau |>
+  summarise_all(~ sum(is.na(.)))
+```
+```{r}
+#taking a 10,000 sample from the bureau data set
+bureau_sample <- sample_n(bureau, 10000)
+write.csv(bureau_sample, 'bureau_sample.csv')
+```
+
+## bureau_balance
+```{r}
+bureau_balance <- read.csv('bureau_balance.csv')
+```
+```{r}
+#taking a 10,000 sample from the bureau balance data set
+bureau_balance_sample <- sample_n(bureau_balance, 10000)
+write.csv(bureau_balance_sample, 'bureau_balance_sample.csv')
+```
+
+## POS_CASH_balance
+```{r}
+POS_CASH_balance <- read.csv('POS_CASH_balance.csv')
+```
+```{r}
+#replacing all NAs with 0
+POS_CASH_balance[is.na(POS_CASH_balance)] <- 0
+
+#checking that there are no more NAs in dataframe
+POS_CASH_balance |>
+  summarise_all(~ sum(is.na(.)))
+```
+```{r}
+#taking a 10,000 sample from the POS CASH balance data set
+POS_CASH_balance_sample <- sample_n(POS_CASH_balance, 10000)
+write.csv(POS_CASH_balance_sample, 'POS_CASH_balance_sample.csv')
+```
+
+## credit_card_balance
+```{r}
+credit_card_balance <- read.csv('credit_card_balance.csv')
+```
+```{r}
+#replacing all NAs with 0
+credit_card_balance[is.na(credit_card_balance)] <- 0
+
+#checking that there are no more NAs in dataframe
+credit_card_balance |>
+  summarise_all(~ sum(is.na(.)))
+```
+```{r}
+#taking a 10,000 sample from the credit card balance data set
+credit_card_balance_sample <- sample_n(credit_card_balance, 10000)
+write.csv(credit_card_balance_sample, 'credit_card_balance_sample.csv')
+```
+
+## previous_application
+```{r}
+previous_application <- read.csv('previous_application.csv')
+```
+```{r}
+#summarizing amount of NAs for each column in previous_application and deleting columns with more than 70% NAs
+previous_application |>
+  summarize_all(funs(sum(is.na(.)) / length(.)))
+
+#https://stackoverflow.com/questions/31848156/delete-columns-rows-with-more-than-x-missing
+previous_application <- previous_application[, which(colMeans(!is.na(previous_application)) > 0.7)]
+
+#replacing all NAs with 0
+previous_application[is.na(previous_application)] <- 0
+
+#checking that there are no more NAs in dataframe
+previous_application |>
+  summarise_all(~ sum(is.na(.)))
+```
+```{r}
+#taking a 10,000 sample from the previous application data set
+previous_application_sample <- sample_n(previous_application, 10000)
+write.csv(previous_application_sample, 'previous_application_sample.csv')
+```
+
+## installments_payments
+```{r}
+installments_payments <- read.csv('installments_payments.csv')
+```
+```{r}
+#determining if the same 2905 clients are missing information
+#https://www.statology.org/r-select-rows-with-na/
+installments_payments[!complete.cases(installments_payments), ]
+
+#replacing all NAs with missing
+installments_payments[is.na(installments_payments)] <- 'missing'
+
+#checking that there are no more NAs in dataframe
+installments_payments |>
+  summarise_all(~ sum(is.na(.)))
+```
+```{r}
+#taking a 10,000 sample from the installment data set
+installments_payments_sample <- sample_n(installments_payments, 10000)
+write.csv(installments_payments_sample, 'installments_payments_sample.csv')
+```
