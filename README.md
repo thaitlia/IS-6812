@@ -10,6 +10,13 @@
 - [Difficulties Encountered](#difficulties-encountered)
 - [Project Learnings](#project-learnings)
 
+## Individual Notebooks
+| Notebook Title  | About | Link |
+| :---: | :---: | :---: | :---: |
+| Random Sampling of Home Credit Default Risk Files | Speaker - GDG & Women Techmakers - Machine Learning #3 | 18.10.2017 | [Link](https://speakerdeck.com/f1sherkk/welcome-to-mooc-era-my-dlfnd-experiences-at-udacity) |
+| Soft introduction into MSE based Linear Regression (part 2 of 'What this Machine Learning is all about?' talk)  | Azimo Lunch & Learn | 16.11.2017 | [Link](https://speakerdeck.com/f1sherkk/soft-introduction-to-mse-based-linear-regression) |
+| Advantages of Batch Normalization in Deep Learning | PyData Warsaw, Let’s meet to talk about AI in Bialystok #2 | 10.04.2018, 01.06.2018 | [Link](https://www.youtube.com/watch?v=9mI-viU9U0E) |
+
 ## Summary of Business Problem and Project Objective
 ### Business Problem Statement
 Home Credit uses a variety of alternative data to predict a client’s likelihood of repayment. Although their current statistical models and machine learning methods are capable of making these predictions, the purpose of collaborating with Kaggle is to create a more robust and accurate prediction model to determine client repayment abilities – particularly with the unbanked population. This specific population usually does not have a typical credit score, preventing them from having access to the capital the general population has.
